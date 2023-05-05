@@ -10,7 +10,7 @@ import (
 
 func main() {
 	database.ConnectDb()
-	role := models.Role{Role: "customer"}
+	role := models.Role{Role: "admin"}
 	database.DB.Create(&role)
 	//var user = models.User{}
 	//database.DB.First(&user)
