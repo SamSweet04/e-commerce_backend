@@ -30,6 +30,7 @@ func RegisterUser(context *gin.Context) {
 	}
 	context.JSON(http.StatusCreated, gin.H{"userId": user.ID, "email": user.Email, "username": user.Username})
 }
+
 func GetUsers(c *gin.Context) {
 	users, result := services.GetUsers()
 	if result.Error != nil {
