@@ -2,43 +2,34 @@ package main
 
 import (
 	"fmt"
-	"github.com/SamSweet04/e-commerce_backend.git/auth"
 	"github.com/SamSweet04/e-commerce_backend.git/controllers"
 	"github.com/SamSweet04/e-commerce_backend.git/middlewares"
-	gormadapter "github.com/casbin/gorm-adapter/v3"
-	"github.com/gin-contrib/authz"
+	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-func InitRouter() {
+func InitRouter(db *gorm.DB) {
 	router := gin.New()
 
-	adapter, err := gormadapter.NewAdapterByDB(db)
+	// Load model configuration file and policy store adapter
+	enforcer, err := casbin.NewEnforcer("auth/model.conf", "auth/policy.csv")
 	if err != nil {
-		panic(fmt.Sprintf("failed to initialize casbin adapter: %v", err))
+		panic(fmt.Sprintf("failed to create casbin enforcer: %v", err))
 	}
 
-	enforcer, err := auth.NewEnforcer()
-	if err != nil {
-		panic(err)
-	}
-	router.Use(authz.NewAuthorizer(enforcer))
+	//add policy
+	//auth.AddPolicies(enforcer)
 
 	router.GET("/roles", controllers.GetRoles)
-	router.GET("/data1/read", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "You can read data1"})
-	})
-	router.GET("/data1/write", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "You can write data1"})
-	})
-	api := router.Group("/auth")
+	auth := router.Group("/auth")
 	{
-		api.POST("/token", controllers.GenerateToken)
-		api.POST("/register", controllers.RegisterUser)
-		secured := api.Group("/secured").Use(middlewares.Auth())
-		{
-			secured.GET("/ping", controllers.Ping)
-		}
+		auth.POST("/token", controllers.GenerateToken)
+		auth.POST("/register", controllers.RegisterUser)
+	}
+	api := router.Group("/api").Use(middlewares.AuthWithJWT())
+	{
+		api.GET("/ping", middlewares.Authorize("ping", "read", enforcer), controllers.Ping)
 	}
 	router.Run(":3000")
 }

@@ -1,4 +1,1 @@
-p, admin, data1, read
-p, admin, data1, write
-p, data_entry, data1, write
-p, guest, data1, read
+p, admin, ping, read

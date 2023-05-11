@@ -4,6 +4,7 @@ import (
 	"github.com/SamSweet04/e-commerce_backend.git/database"
 	"github.com/SamSweet04/e-commerce_backend.git/models"
 	"github.com/SamSweet04/e-commerce_backend.git/services"
+	"github.com/SamSweet04/e-commerce_backend.git/utils"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -16,10 +17,12 @@ func RegisterUser(context *gin.Context) {
 		context.Abort()
 		return
 	}
-	if err := user.HashPassword(user.Password); err != nil {
+	if hashedPassword, err := utils.HashPassword(user.Password); err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		context.Abort()
 		return
+	} else {
+		user.Password = hashedPassword
 	}
 	record := database.DB.Create(&user)
 
