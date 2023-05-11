@@ -6,11 +6,10 @@ import (
 	"github.com/SamSweet04/e-commerce_backend.git/middlewares"
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func InitRouter(db *gorm.DB) {
-	router := gin.New()
+func InitRouter() {
+	router := gin.Default()
 
 	// Load model configuration file and policy store adapter
 	enforcer, err := casbin.NewEnforcer("auth/model.conf", "auth/policy.csv")
@@ -18,18 +17,39 @@ func InitRouter(db *gorm.DB) {
 		panic(fmt.Sprintf("failed to create casbin enforcer: %v", err))
 	}
 
-	//add policy
-	//auth.AddPolicies(enforcer)
+	// Public routes
+	router.POST("/register", controllers.RegisterUser)
+	router.POST("/login", controllers.Login)
+	
+	// Authenticated routes
+	authenticated := router.Group("/auth")
+	authenticated.Use(middlewares.AuthWithJWT())
+	{
+		authenticated.GET("/", controllers.WelcomePage)
+		authenticated.GET("/getusers", middlewares.Authorize("user", "read", enforcer), controllers.GetUsers)
 
-	router.GET("/roles", controllers.GetRoles)
-	auth := router.Group("/auth")
-	{
-		auth.POST("/token", controllers.GenerateToken)
-		auth.POST("/register", controllers.RegisterUser)
-	}
-	api := router.Group("/api").Use(middlewares.AuthWithJWT())
-	{
-		api.GET("/ping", middlewares.Authorize("ping", "read", enforcer), controllers.Ping)
+		// User routes
+		userRoutes := authenticated.Group("/user")
+		{
+			userRoutes.GET("/", controllers.GetUsers)
+			userRoutes.GET("/:id", controllers.GetUserById)
+			userRoutes.PUT("/:id", controllers.UpdateUser)
+			userRoutes.DELETE("/:id", controllers.RemoveUser)
+			userRoutes.POST("/:id/save", controllers.SaveItem)
+			userRoutes.DELETE("/:id/saved", controllers.RemoveSavedItem)
+			userRoutes.GET("/:id/saved", controllers.GetSavedItems)
+			userRoutes.POST("/:id/rate/:itemId", controllers.RateItem)
+		}
+		// Define routes for managing items
+		items := router.Group("/items")
+		{
+			items.GET("/", controllers.GetItems)
+			items.GET("/:id", controllers.GetItem)
+			items.POST("/", controllers.AddItem)
+			items.PUT("/:id", controllers.UpdateItem)
+			items.DELETE("/:id", controllers.RemoveItem)
+			items.GET("/search", controllers.SearchItems)
+		}
 	}
 	router.Run(":3000")
 }

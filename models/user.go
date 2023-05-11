@@ -13,6 +13,7 @@ type User struct {
 	Instagram string `json:"instagram"`
 	Telegram  string `json:"telegram"`
 	Role      string `json:"role"`
+	Balance   int    `json:"balance" gorm:"not null"`
 }
 
 // constructor
@@ -22,5 +23,6 @@ func NewUser(username, password, email, role string) *User {
 		Password: password,
 		Email:    email,
 		Role:     role,
+		Balance:  0,
 	}
 }

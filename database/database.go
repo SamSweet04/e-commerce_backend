@@ -26,9 +26,6 @@ func ConnectDb() {
 		os.Exit(2)
 	}
 
-	HandleRoles(db)
-
-	db.AutoMigrate(&models.Role{})
 	db.AutoMigrate(&models.User{})
 	db.AutoMigrate(&models.Item{})
 	db.AutoMigrate(&models.SavedItem{})

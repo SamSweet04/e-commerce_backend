@@ -10,37 +10,33 @@ import (
 )
 
 type TokenRequest struct {
-	UserID   string `json:"userID"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-func GenerateToken(context *gin.Context) {
+func Login(context *gin.Context) {
 	var request TokenRequest
 	var user models.User
 	if err := context.ShouldBindJSON(&request); err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		context.Abort()
+		context.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// check if email exists and password is correct
-	record := database.DB.First(&user, request.UserID)
+	record := database.DB.Where("email = ?", request.Email).First(&user)
 	if record.Error != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": record.Error.Error()})
-		context.Abort()
+		context.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": record.Error.Error()})
 		return
 	}
 	credentialError := utils.CheckPassword(request.Password, user.Password)
 	if !credentialError {
-		context.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
-		context.Abort()
+		context.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
 
-	tokenString, err := auth.GenerateJWT(int(user.ID))
+	tokenString, err := auth.GenerateToken(int(user.ID))
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		context.Abort()
+		context.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	context.JSON(http.StatusOK, gin.H{"token": tokenString})

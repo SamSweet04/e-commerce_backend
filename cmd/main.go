@@ -6,5 +6,5 @@ import (
 
 func main() {
 	database.ConnectDb()
-	InitRouter(database.DB)
+	InitRouter()
 }
