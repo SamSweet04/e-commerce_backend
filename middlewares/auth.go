@@ -18,7 +18,7 @@ func AuthWithJWT() gin.HandlerFunc {
 		if userID, err := auth.ValidateToken(tokenString); err != nil {
 			context.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		} else {
-			context.Set("userID", userID)
+			context.Set("id", userID)
 		}
 	}
 }

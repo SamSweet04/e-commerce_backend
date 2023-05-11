@@ -20,7 +20,7 @@ func InitRouter() {
 	// Public routes
 	router.POST("/register", controllers.RegisterUser)
 	router.POST("/login", controllers.Login)
-	
+
 	// Authenticated routes
 	authenticated := router.Group("/auth")
 	authenticated.Use(middlewares.AuthWithJWT())
@@ -33,12 +33,15 @@ func InitRouter() {
 		{
 			userRoutes.GET("/", controllers.GetUsers)
 			userRoutes.GET("/:id", controllers.GetUserById)
-			userRoutes.PUT("/:id", controllers.UpdateUser)
+			userRoutes.PUT("/", controllers.UpdateUser)
 			userRoutes.DELETE("/:id", controllers.RemoveUser)
-			userRoutes.POST("/:id/save", controllers.SaveItem)
-			userRoutes.DELETE("/:id/saved", controllers.RemoveSavedItem)
-			userRoutes.GET("/:id/saved", controllers.GetSavedItems)
-			userRoutes.POST("/:id/rate/:itemId", controllers.RateItem)
+			userRoutes.POST("/save/:item_id", controllers.SaveItem)
+			userRoutes.DELETE("/savedRemove/:item_id", controllers.RemoveSavedItem)
+			userRoutes.GET("/save/", controllers.GetSavedItems)
+			userRoutes.PUT("/rate/:item_id", controllers.RateItem)
+			userRoutes.POST("/comment/:rating_id", controllers.CommentingItem)
+			userRoutes.GET("/comment/:item_id", controllers.GetComments)
+			userRoutes.PUT("/:id/buy/:itemId", controllers.BuyItem)
 		}
 		// Define routes for managing items
 		items := router.Group("/items")

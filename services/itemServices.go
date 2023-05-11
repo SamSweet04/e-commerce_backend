@@ -5,7 +5,6 @@ import (
 	"github.com/SamSweet04/e-commerce_backend.git/database"
 	"github.com/SamSweet04/e-commerce_backend.git/models"
 	"gorm.io/gorm"
-	"strconv"
 )
 
 func GetItems() ([]models.Item, *gorm.DB) {
@@ -46,7 +45,7 @@ func UpdateItem(name, itemId string, price int) (*gorm.DB, string) {
 	return result, ""
 }
 
-func SearchItems(query, orderStr, filter string) ([]models.Item, *gorm.DB) {
+func SearchItems(query, orderStr string) ([]models.Item, *gorm.DB) {
 	order := ""
 	if len(orderStr) > 0 {
 		if orderStr[0] == '-' {
@@ -58,24 +57,5 @@ func SearchItems(query, orderStr, filter string) ([]models.Item, *gorm.DB) {
 	}
 	var items []models.Item
 	result := database.DB.Where("LOWER(name) LIKE ? OR LOWER(description) LIKE ?", "%"+query+"%", "%"+query+"%").Order(order).Find(&items)
-	return items, result
-}
-func SearchItemsByDesc(desc, sort string) ([]models.Item, *gorm.DB) {
-	var items []models.Item
-	result := database.DB.Where("LOWER(description) LIKE ?", "%"+desc+"%").Order(sort).Find(&items)
-	return items, result
-}
-func FilterItemsByPrice(start, end int) ([]models.Item, *gorm.DB) {
-	st := strconv.Itoa(start)
-	e := strconv.Itoa(end)
-	var items []models.Item
-	result := database.DB.Where("price BETWEEN ? AND ?", "%"+st+"%", "%"+e+"%").Find(&items)
-	return items, result
-}
-func FilterItemsByRating(start, end int) ([]models.Item, *gorm.DB) {
-	st := strconv.Itoa(start)
-	e := strconv.Itoa(end)
-	var items []models.Item
-	result := database.DB.Where("rating BETWEEN ? AND ?", "%"+st+"%", "%"+e+"%").Find(&items)
 	return items, result
 }

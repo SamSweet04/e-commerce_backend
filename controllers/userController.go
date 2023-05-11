@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"github.com/SamSweet04/e-commerce_backend.git/database"
 	"github.com/SamSweet04/e-commerce_backend.git/models"
 	"github.com/SamSweet04/e-commerce_backend.git/services"
@@ -53,9 +54,8 @@ func GetUsers(c *gin.Context) {
 }
 
 func GetUserById(c *gin.Context) {
-	//id := c.Param("id")
-	userID := c.Param("id")
-	user, result := services.GetUserById(userID)
+	id := c.Param("id")
+	user, result := services.GetUserById(id)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Something went wrong, please try again",
@@ -77,10 +77,19 @@ func RemoveUser(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 func UpdateUser(c *gin.Context) {
-	id := c.Param("id")
-	name := c.Query("name")
-	password := c.Query("password")
-	result := services.UpdateUser(id, name, password)
+	userID, ok := c.Get("id")
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": ok,
+		})
+		return
+	}
+	var user models.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	result := services.UpdateUser(userID, user)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Something went wrong, please try again",
@@ -90,26 +99,25 @@ func UpdateUser(c *gin.Context) {
 }
 
 func RateItem(c *gin.Context) {
-	id := c.Param("item_id")
-	scoreStr := c.Query("rating")
-	itemId, _ := strconv.Atoi(id)
-	rating, _ := strconv.Atoi(scoreStr)
-
 	userID, ok := c.Get("id")
-
 	if !ok {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error": ok,
 		})
 		return
 	}
+	user, _ := strconv.Atoi(fmt.Sprintf("%v", userID))
+	id := c.Param("item_id")
+	scoreStr := c.Query("rating")
+	itemId, _ := strconv.Atoi(id)
+	rating, _ := strconv.Atoi(scoreStr)
 
 	if rating < 1 || rating > 5 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Provide valid rating",
 		})
 	}
-	result, err := services.RateItem(userID.(int), itemId, rating)
+	result, err := services.RateItem(user, itemId, rating)
 	if err != "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Couldn't find item",
@@ -126,19 +134,18 @@ func RateItem(c *gin.Context) {
 }
 
 func SaveItem(c *gin.Context) {
-	itemId := c.Query("itemId")
+	userID, ok := c.Get("id")
+	itemId := c.Param("item_id")
 
 	item, _ := strconv.Atoi(itemId)
-	userID, ok := c.Get("id")
-
 	if !ok {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error": ok,
 		})
 		return
 	}
-
-	result := services.SaveItem(userID.(int), item)
+	id, _ := strconv.Atoi(fmt.Sprintf("%v", userID))
+	result := services.SaveItem(id, item)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -150,19 +157,18 @@ func SaveItem(c *gin.Context) {
 }
 
 func RemoveSavedItem(c *gin.Context) {
-	itemId := c.Query("itemId")
-
+	userID, ok := c.Get("id")
+	itemId := c.Param("item_id")
 	item, _ := strconv.Atoi(itemId)
-	userID, ok := c.Get("userID")
-
 	if !ok {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error": ok,
 		})
 		return
 	}
+	id := userID.(int)
 
-	result := services.RemoveSavedItem(userID.(int), item)
+	result := services.RemoveSavedItem(id, item)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -174,22 +180,15 @@ func RemoveSavedItem(c *gin.Context) {
 }
 
 func GetSavedItems(c *gin.Context) {
-	userID, ok := c.Get("userID")
-
+	userID, ok := c.Get("id")
 	if !ok {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"error": ok,
 		})
 		return
 	}
-	items, result := services.GetSavedItem(userID.(int))
-
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": result.Error,
-		})
-		return
-	}
+	id, _ := strconv.Atoi(fmt.Sprintf("%v", userID))
+	items := services.GetSavedItem(id)
 
 	c.JSON(http.StatusOK, gin.H{
 		"items": items,
@@ -197,7 +196,7 @@ func GetSavedItems(c *gin.Context) {
 }
 
 func CommentingItem(c *gin.Context) {
-	ratingId := c.Param("ratingId")
+	ratingId := c.Param("rating_id")
 	comment := c.Query("comment")
 	rating, _ := strconv.Atoi(ratingId)
 
@@ -217,7 +216,7 @@ func CommentingItem(c *gin.Context) {
 }
 
 func GetComments(c *gin.Context) {
-	itemId := c.Param("itemId")
+	itemId := c.Param("item_id")
 	item, _ := strconv.Atoi(itemId)
 	comments, result := services.GetComments(item)
 	if result.Error != nil {
@@ -232,11 +231,18 @@ func GetComments(c *gin.Context) {
 }
 
 func BuyItem(c *gin.Context) {
+	userID, ok := c.Get("id")
 	itemId := c.Param("itemId")
 	item, _ := strconv.Atoi(itemId)
-	userID := c.Param("id")
-	user, _ := strconv.Atoi(userID)
-	payment, result := services.BuyItem(user, item)
+
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": ok,
+		})
+		return
+	}
+	id := userID.(int)
+	payment, result := services.BuyItem(id, item)
 	if result != true {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": result,

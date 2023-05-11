@@ -21,5 +21,5 @@ func WelcomePage(c *gin.Context) {
 			"error": "Something went wrong, please try again",
 		})
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Welcome" + user.Username + "!"})
+	c.JSON(http.StatusOK, gin.H{"message": "Welcome " + user.Username + "!"})
 }

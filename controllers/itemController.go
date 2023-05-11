@@ -129,9 +129,8 @@ func UpdateItem(c *gin.Context) {
 func SearchItems(c *gin.Context) {
 	query := strings.ToLower(c.Query("query"))
 	order := c.Query("order")
-	filter := c.Query("filter")
 
-	items, result := services.SearchItems(query, order, filter)
+	items, result := services.SearchItems(query, order)
 
 	if len(items) == 0 || result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{

@@ -24,19 +24,22 @@ func RemoveUser(id string) *gorm.DB {
 	return result
 }
 
-func UpdateUser(id, name, password string) *gorm.DB {
-	hashPassword, _ := utils.HashPassword(password)
+func UpdateUser(id any, newUser models.User) *gorm.DB {
+	hashPassword, _ := utils.HashPassword(newUser.Password)
 	var user models.User
 	result := database.DB.First(&user, id)
 	if user == (models.User{}) {
 		return result
 	}
-	user.Username = name
+	user.Username = newUser.Username
+	user.Github = newUser.Github
+	user.Instagram = newUser.Instagram
+	user.Telegram = newUser.Telegram
 	user.Password = hashPassword
 	result = database.DB.Save(&user)
 	return result
 }
-func RateItem(userID, itemId, rating int) (*gorm.DB, string) {
+func RateItem(userID int, itemId, rating int) (*gorm.DB, string) {
 	var item models.Item
 	result := database.DB.First(&item, itemId)
 	if item == (models.Item{}) {
@@ -51,7 +54,7 @@ func RateItem(userID, itemId, rating int) (*gorm.DB, string) {
 
 func CalculateRating(itemId int) float32 {
 	var rating []models.Rating
-	database.DB.Find("itemId = ?", itemId, &rating)
+	database.DB.Where("item_id = ?", itemId).Find(&rating)
 	sum := 0
 	for i := 0; i < len(rating); i++ {
 		sum += rating[i].Rating
@@ -60,21 +63,22 @@ func CalculateRating(itemId int) float32 {
 
 }
 
-func SaveItem(userId, itemId int) *gorm.DB {
+func SaveItem(userId int, itemId int) *gorm.DB {
 	savedItem := models.NewSavedItem(userId, itemId)
 	result := database.DB.Create(&savedItem)
 	return result
 }
 
-func RemoveSavedItem(userId, itemId int) *gorm.DB {
-	result := database.DB.Where("userID = ? and itemID = ?", userId, itemId).Delete(models.SavedItem{})
+func RemoveSavedItem(userId int, itemId int) *gorm.DB {
+	result := database.DB.Where("user_id = ? and item_id = ? and deleted_at = NULL", userId, itemId).Delete(models.SavedItem{})
 	return result
 }
 
-func GetSavedItem(userId int) ([]models.Item, *gorm.DB) {
-	var items []models.Item
-	result := database.DB.Model(&models.SavedItem{}).Select("items.id, name, description, price, rating").Joins("left join items on savedItem.user_id = ?", userId).Where("items.id = savedItem.item_id").Scan(&items)
-	return items, result
+func GetSavedItem(userId int) []models.SavedItem {
+	var items []models.SavedItem
+	//result := database.DB.Model(&models.SavedItem{}).Select("items.id, name, description, price, rating").Joins("left join items on savedItem.user_id = ?", userId).Where("items.id = savedItem.item_id").Scan(&items)
+	database.DB.Where("user_id = ?", userId).Find(&items)
+	return items
 }
 
 func CommentingItem(ratingId int, comment string) (*gorm.DB, string) {
