@@ -11,7 +11,7 @@ import (
 func Authorize(obj string, act string, enforcer *casbin.Enforcer) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get current user/subject
-		userID, exists := c.Get("userID")
+		userID, exists := c.Get("id")
 		if !exists {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User hasn't logged in yet"})
 			return
@@ -35,7 +35,7 @@ func Authorize(obj string, act string, enforcer *casbin.Enforcer) gin.HandlerFun
 		}
 
 		if !ok {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "You don't necessary have privileges"})
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "You don't have necessary privileges"})
 			return
 		}
 		c.Next()

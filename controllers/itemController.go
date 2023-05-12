@@ -44,7 +44,14 @@ func AddItem(c *gin.Context) {
 	name := c.Query("name")
 	description := c.Query("description")
 	priceStr := c.Query("price")
-	userIdStr := c.Query("userId")
+	//userIdStr := c.Query("userId")
+	userID, ok := c.Get("id")
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": ok,
+		})
+		return
+	}
 
 	if name == "" || priceStr == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -61,15 +68,17 @@ func AddItem(c *gin.Context) {
 		return
 	}
 
-	userId, idErr := strconv.Atoi(userIdStr)
-	if idErr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Enter correct price",
-		})
-		return
-	}
+	//userId, idErr := strconv.Atoi(userIdStr)
+	//if idErr != nil {
+	//	c.JSON(http.StatusBadRequest, gin.H{
+	//		"error": "Enter correct price",
+	//	})
+	//	return
+	//}
 
-	result := services.AddItem(name, description, price, userId)
+	id, _ := strconv.Atoi(fmt.Sprintf("%v", userID))
+
+	result := services.AddItem(name, description, price, id)
 	fmt.Println(result.Error)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

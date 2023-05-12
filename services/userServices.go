@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"github.com/SamSweet04/e-commerce_backend.git/database"
 	"github.com/SamSweet04/e-commerce_backend.git/models"
 	"github.com/SamSweet04/e-commerce_backend.git/utils"
@@ -59,7 +60,11 @@ func CalculateRating(itemId int) float32 {
 	for i := 0; i < len(rating); i++ {
 		sum += rating[i].Rating
 	}
-	return float32(sum / len(rating))
+	if len(rating) > 0 {
+		return float32(sum/len(rating) - 1)
+	} else {
+		return 0
+	}
 
 }
 
@@ -102,16 +107,19 @@ func BuyItem(userID, itemId int) (*gorm.DB, bool) {
 	var item models.Item
 	result := database.DB.First(&item, itemId)
 	if item == (models.Item{}) {
+		fmt.Println("No items found")
 		return result, false
 	}
 	var user models.User
 	result2 := database.DB.First(&user, userID)
 	if user == (models.User{}) {
+		fmt.Println("No user found")
 		return result2, false
 	}
 	var seller models.User
 	result3 := database.DB.First(&seller, item.UserID)
 	if seller == (models.User{}) {
+		fmt.Println("No seller found")
 		return result3, false
 	}
 	if user.Balance < item.Price {

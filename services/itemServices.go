@@ -21,6 +21,7 @@ func GetItem(id string) (models.Item, *gorm.DB) {
 
 func AddItem(name, description string, price, userId int) *gorm.DB {
 	item := models.NewItem(name, description, price, userId, 0)
+	database.DB.First(userId)
 	result := database.DB.Create(&item)
 	return result
 }

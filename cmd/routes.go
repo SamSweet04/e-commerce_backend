@@ -26,31 +26,30 @@ func InitRouter() {
 	authenticated.Use(middlewares.AuthWithJWT())
 	{
 		authenticated.GET("/", controllers.WelcomePage)
-		authenticated.GET("/getusers", middlewares.Authorize("user", "read", enforcer), controllers.GetUsers)
 
 		// User routes
 		userRoutes := authenticated.Group("/user")
 		{
-			userRoutes.GET("/", controllers.GetUsers)
-			userRoutes.GET("/:id", controllers.GetUserById)
-			userRoutes.PUT("/", controllers.UpdateUser)
-			userRoutes.DELETE("/:id", controllers.RemoveUser)
+			userRoutes.GET("/", middlewares.Authorize("user", "read", enforcer), controllers.GetUsers)
+			userRoutes.GET("/:id", middlewares.Authorize("user", "read", enforcer), controllers.GetUserById)
+			userRoutes.PUT("/", middlewares.Authorize("user", "write", enforcer), controllers.UpdateUser)
+			userRoutes.DELETE("/:id", middlewares.Authorize("user", "write", enforcer), controllers.RemoveUser)
 			userRoutes.POST("/save/:item_id", controllers.SaveItem)
 			userRoutes.DELETE("/savedRemove/:item_id", controllers.RemoveSavedItem)
 			userRoutes.GET("/save/", controllers.GetSavedItems)
 			userRoutes.PUT("/rate/:item_id", controllers.RateItem)
 			userRoutes.POST("/comment/:rating_id", controllers.CommentingItem)
 			userRoutes.GET("/comment/:item_id", controllers.GetComments)
-			userRoutes.PUT("/:id/buy/:itemId", controllers.BuyItem)
+			userRoutes.PUT("/buy/:itemId", controllers.BuyItem)
 		}
 		// Define routes for managing items
-		items := router.Group("/items")
+		items := authenticated.Group("/items")
 		{
 			items.GET("/", controllers.GetItems)
 			items.GET("/:id", controllers.GetItem)
-			items.POST("/", controllers.AddItem)
-			items.PUT("/:id", controllers.UpdateItem)
-			items.DELETE("/:id", controllers.RemoveItem)
+			items.POST("/", middlewares.Authorize("item", "write", enforcer), controllers.AddItem)
+			items.PUT("/:id", middlewares.Authorize("item", "write", enforcer), controllers.UpdateItem)
+			items.DELETE("/:id", middlewares.Authorize("item", "write", enforcer), controllers.RemoveItem)
 			items.GET("/search", controllers.SearchItems)
 		}
 	}

@@ -199,7 +199,7 @@ func CommentingItem(c *gin.Context) {
 	ratingId := c.Param("rating_id")
 	comment := c.Query("comment")
 	rating, _ := strconv.Atoi(ratingId)
-
+	//fmt.Println(ratingId)
 	result, err := services.CommentingItem(rating, comment)
 	if err != "" {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -241,7 +241,7 @@ func BuyItem(c *gin.Context) {
 		})
 		return
 	}
-	id := userID.(int)
+	id, _ := strconv.Atoi(fmt.Sprintf("%v", userID))
 	payment, result := services.BuyItem(id, item)
 	if result != true {
 		c.JSON(http.StatusInternalServerError, gin.H{
