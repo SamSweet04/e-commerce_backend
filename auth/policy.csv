@@ -1,0 +1,6 @@
+p, admin, ping, read
+p, admin, user, read
+p, seller, item, read
+p, seller, item, write
+p, admin, item, read
+p, admin, item, write

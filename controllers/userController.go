@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"fmt"
 	"github.com/SamSweet04/e-commerce_backend.git/database"
 	"github.com/SamSweet04/e-commerce_backend.git/models"
 	"github.com/SamSweet04/e-commerce_backend.git/services"
+	"github.com/SamSweet04/e-commerce_backend.git/utils"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -13,19 +15,28 @@ func RegisterUser(context *gin.Context) {
 	var user models.User
 	if err := context.ShouldBindJSON(&user); err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		context.Abort()
 		return
 	}
-	if err := user.HashPassword(user.Password); err != nil {
+
+	if !utils.IsValidEmail(user.Email) {
+		context.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
+		return
+	}
+
+	if !utils.IsValidPassword(user.Password) {
+		context.JSON(http.StatusBadRequest, gin.H{"error": "Password must have minimum 8 characters and include both letters and numbers"})
+		return
+	}
+	if hashedPassword, err := utils.HashPassword(user.Password); err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		context.Abort()
 		return
+	} else {
+		user.Password = hashedPassword
 	}
 	record := database.DB.Create(&user)
-
 	if record.Error != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"error": record.Error.Error()})
-		context.Abort()
 		return
 	}
 	context.JSON(http.StatusCreated, gin.H{"userId": user.ID, "email": user.Email, "username": user.Username})
@@ -66,10 +77,19 @@ func RemoveUser(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 func UpdateUser(c *gin.Context) {
-	id := c.Param("id")
-	name := c.Query("name")
-	password := c.Query("password")
-	result := services.UpdateUser(id, name, password)
+	userID, ok := c.Get("id")
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": ok,
+		})
+		return
+	}
+	var user models.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	result := services.UpdateUser(userID, user)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Something went wrong, please try again",
@@ -79,17 +99,25 @@ func UpdateUser(c *gin.Context) {
 }
 
 func RateItem(c *gin.Context) {
-	id := c.Param("id")
+	userID, ok := c.Get("id")
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": ok,
+		})
+		return
+	}
+	user, _ := strconv.Atoi(fmt.Sprintf("%v", userID))
+	id := c.Param("item_id")
 	scoreStr := c.Query("rating")
-	rating, ratingErr := strconv.ParseFloat(scoreStr, 32)
+	itemId, _ := strconv.Atoi(id)
+	rating, _ := strconv.Atoi(scoreStr)
 
-	if ratingErr != nil {
+	if rating < 1 || rating > 5 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Provide valid rating",
 		})
 	}
-
-	result, err := services.RateItem(id, float32(rating))
+	result, err := services.RateItem(user, itemId, rating)
 	if err != "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Couldn't find item",
@@ -106,13 +134,18 @@ func RateItem(c *gin.Context) {
 }
 
 func SaveItem(c *gin.Context) {
-	userId := c.Param("userId")
-	itemId := c.Query("itemId")
+	userID, ok := c.Get("id")
+	itemId := c.Param("item_id")
 
-	user, _ := strconv.Atoi(userId)
 	item, _ := strconv.Atoi(itemId)
-
-	result := services.SaveItem(user, item)
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": ok,
+		})
+		return
+	}
+	id, _ := strconv.Atoi(fmt.Sprintf("%v", userID))
+	result := services.SaveItem(id, item)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -124,13 +157,18 @@ func SaveItem(c *gin.Context) {
 }
 
 func RemoveSavedItem(c *gin.Context) {
-	userId := c.Param("userId")
-	itemId := c.Query("itemId")
-
-	user, _ := strconv.Atoi(userId)
+	userID, ok := c.Get("id")
+	itemId := c.Param("item_id")
 	item, _ := strconv.Atoi(itemId)
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": ok,
+		})
+		return
+	}
+	id := userID.(int)
 
-	result := services.RemoveSavedItem(user, item)
+	result := services.RemoveSavedItem(id, item)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -142,18 +180,76 @@ func RemoveSavedItem(c *gin.Context) {
 }
 
 func GetSavedItems(c *gin.Context) {
-	userId := c.Param("id")
-	user, _ := strconv.Atoi(userId)
-	items, result := services.GetSavedItem(user)
+	userID, ok := c.Get("id")
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": ok,
+		})
+		return
+	}
+	id, _ := strconv.Atoi(fmt.Sprintf("%v", userID))
+	items := services.GetSavedItem(id)
 
+	c.JSON(http.StatusOK, gin.H{
+		"items": items,
+	})
+}
+
+func CommentingItem(c *gin.Context) {
+	ratingId := c.Param("rating_id")
+	comment := c.Query("comment")
+	rating, _ := strconv.Atoi(ratingId)
+	//fmt.Println(ratingId)
+	result, err := services.CommentingItem(rating, comment)
+	if err != "" {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err,
+		})
+		return
+	}
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": result.Error,
 		})
 		return
 	}
+}
 
+func GetComments(c *gin.Context) {
+	itemId := c.Param("item_id")
+	item, _ := strconv.Atoi(itemId)
+	comments, result := services.GetComments(item)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": result.Error,
+		})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"items": items,
+		"comments": &comments,
+	})
+}
+
+func BuyItem(c *gin.Context) {
+	userID, ok := c.Get("id")
+	itemId := c.Param("itemId")
+	item, _ := strconv.Atoi(itemId)
+
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": ok,
+		})
+		return
+	}
+	id, _ := strconv.Atoi(fmt.Sprintf("%v", userID))
+	payment, result := services.BuyItem(id, item)
+	if result != true {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": result,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"Payment": &payment,
 	})
 }
